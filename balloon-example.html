@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>d3-balloon example</title>
+
+    <style type="text/css">
+    body {
+        background: lightgray;
+    }
+
+    #vis_container {
+        background: white;
+        width: 500px;
+        margin-top: 50px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    </style>
+
+    <script src="d3/d3.js"></script>
+    <script src="d3-balloon.js"></script>
+</head>
+<body>
+
+<div id="vis_container">
+
+</div>
+
+<script>
+    var WIDTH = 500;
+    var HEIGHT = 300;
+    var PLOTTING_AREA_MARGINS = [15, 15, 40, 30];   // top, right, bottom, left
+    var PLOTTING_AREA_W = WIDTH - PLOTTING_AREA_MARGINS[1] - PLOTTING_AREA_MARGINS[3];
+    var PLOTTING_AREA_H = HEIGHT - PLOTTING_AREA_MARGINS[0] - PLOTTING_AREA_MARGINS[2];
+
+    var svg = d3.select("#vis_container").append("svg")
+        .attr("width", WIDTH)
+        .attr("height", HEIGHT);
+
+    var data = generateRandMat(5, 7, 0, 10);
+
+    var bplot = balloonplot(PLOTTING_AREA_W, PLOTTING_AREA_H)
+        .position(PLOTTING_AREA_MARGINS[3], PLOTTING_AREA_MARGINS[0])
+        .data(data);
+
+    svg.append(bplot)
+        .attr("class", "balloon_plot");
+
+
+    function randFloat(a, b) {
+        return a + Math.random() * (b - a);
+    }
+
+    function generateRandMat(rows, cols, minVal, maxVal, round) {
+        if (typeof(round)==='undefined') round = false;
+
+        var mat = [];
+        for (var i = 0; i < rows; i++) {
+            var row = [];
+            for (var j = 0; j < cols; j++) {
+                var v = randFloat(minVal, maxVal);
+                if (round) v = Math.round(v);
+                row.push(v);
+            }
+            mat.push(row);
+        }
+
+        return mat;
+    }
+
+</script>
+
+</body>
+</html>
