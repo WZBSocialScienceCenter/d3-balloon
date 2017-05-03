@@ -13,7 +13,6 @@ function balloonplot(w, h) {
     var bottom = 3;
     var left = 4;
 
-
     var plotW = w;
     var plotH = h;
     var axisW = null;
@@ -31,17 +30,34 @@ function balloonplot(w, h) {
     var yAxis = null;
     var yAxisOrient = null;
 
+    var interactionXAxis = false;
+    var interactionYAxis = false;
+    var interactionCircles = false;
+
+    var curToggle = {
+        'id': null,
+        'actionArg': null,
+        'offAction': null
+    };
+
     var transition = null;
 
+
+    var valueTextDX = 0;
+    var valueTextDY = 5;
+    var valueTextFmt = function(v) {
+        if (isNaN(v)) {
+            return '-'
+        } else {
+            return v;
+        }
+    };
+
+    var g = null;
     var x = null;
     var y = null;
     var r = null;
-
-
-    function setAxisTicks(axis, labels) {
-        return axis.tickValues(d3.range(labels.length))
-            .tickFormat(function (d, i) { return labels[i]; });
-    }
+    var rDataScale = function(d) { return r(d[0]); };
 
 
     function bp() {
@@ -64,54 +80,103 @@ function balloonplot(w, h) {
                 .style("fill", function (_, i) { return colorScale(i); });
         }
 
-        var g = d3.select(document.createElementNS(d3.namespaces.svg, "g"));
+        g = d3.select(document.createElementNS(d3.namespaces.svg, "g"));
 
         g.attr("class", "plotroot").attr("transform", "translate(" + position.join(',') + ")");
 
         if (xAxis !== null) {
             var xAxisPosY = xAxisOrient === top ? -axisH : plotH + axisH;
-            var xAxisGroup = g.append("g")
+            var gxAxis = g.append("g")
                 .attr("class", "x_axis")
                 .attr("transform", "translate(0, " + xAxisPosY + ")")
                 .call(xAxis);
 
             if (colorScale !== null && colorScaleDirection === 'x') {
-                applyColorScaleToAxis(xAxisGroup);
+                applyColorScaleToAxis(gxAxis);
             }
         }
 
         if (yAxis !== null) {
             var yAxisPosX = xAxisOrient === left ? -axisW : plotW + axisW;
-            var yAxisGroup = g.append("g")
+            var gyAxis = g.append("g")
                 .attr("class", "y_axis")
                 .attr("transform", "translate(" + yAxisPosX + ", 0)")
                 .call(yAxis);
 
             if (colorScale !== null && colorScaleDirection === 'y') {
-                applyColorScaleToAxis(yAxisGroup);
+                applyColorScaleToAxis(gyAxis);
             }
         }
 
-        var circles = g.append("g")
+        var gRows = g.append("g")
             .attr("class", "main")
             .selectAll("g")
             .data(data)
             .enter()
                 .append("g")
-                    .attr("class", function(_, rowIdx) { return "row row_" + rowIdx;} )
-                    .selectAll("circle")
-                        .data(function (row, rowIdx) { return row.map(function (val) {return [val, rowIdx]}); })
-                        .enter()
-                            .append("circle")
-                            .attr("class", function (_, colIdx) { return "cell cell_" + colIdx; })
-                            .attr("cx", function(_, colIdx) { return x(colIdx) })
-                            .attr("cy", function(d) { return y(d[1]); })
-                            .style("fill", function (d, colIdx) { return getColorFromScale(d[1], colIdx);  });
+                    .attr("class", function(_, rowIdx) { return "row row_" + rowIdx;} );
+
+        var circles = gRows.selectAll("circle")
+            .data(function (row, rowIdx) { return row.map(function (val) {return [val, rowIdx]}); })
+            .enter()
+                .append("circle")
+                .attr("class", function (_, colIdx) { return "circle circle_" + colIdx; })
+                .attr("cx", function(_, colIdx) { return x(colIdx) })
+                .attr("cy", function(d) { return y(d[1]); })
+                .style("fill", function (d, colIdx) { return getColorFromScale(d[1], colIdx);  });
+
+        var valueTexts = gRows.selectAll("text")
+            .data(function (row, rowIdx) { return row.map(function (val) {return [val, rowIdx]}); })
+            .enter()
+                .append("text")
+                .attr("class", function (_, colIdx) { return "value value_" + colIdx; })
+                .attr("x", function(_, colIdx) { return x(colIdx) })
+                .attr("y", function(d) { return y(d[1]); })
+                .attr("dx", valueTextDX)
+                .attr("dy", valueTextDY)
+                .attr("text-anchor", "middle")
+                .text(function (d) { return valueTextFmt(d[0]) })
+                .style("fill", function (d, colIdx) { return getColorFromScale(d[1], colIdx);  })
+                .style("display", "none");
+
+        if (interactionCircles) {
+            // add invisible rects for mouse over actions of single value cells
+            gRows.selectAll("g")
+                .data(function (row, rowIdx) { return row.map(function (val) {return [val, rowIdx]}); })
+                .enter()
+                    .append("g")
+                    .style("pointer-events", "all").style("pointer-events", "all")
+                    .on("mouseover", function(d, colIdx) {
+                        axisAction('over', 'x', colIdx);
+                        axisAction('over', 'y', d[1]);
+                    })
+                    .on("mouseout", function(d, colIdx) {
+                        axisAction('out', 'x', colIdx);
+                        axisAction('out', 'y', d[1]);
+                    })
+                    .on("touchstart", function(d, colIdx) {
+                        var rowIdx = d[1];
+                        var circleID = rowIdx + '_' + colIdx;
+                        toggleAction('on_circle', circleID, function() {
+                            axisAction('over', 'x', colIdx);
+                            axisAction('over', 'y', rowIdx);
+                        }, function() {
+                            axisAction('out', 'x', colIdx);
+                            axisAction('out', 'y', rowIdx);
+                        });
+                    })
+                    .append("rect")
+                        .attr("x", function(d, colIdx) { return x(colIdx) - rRange[1]; })
+                        .attr("y", function(d) { return y(d[1]) - rRange[1]; })
+                        .attr("width", rRange[1] * 2)
+                        .attr("height", rRange[1] * 2)
+                        .style("visibility", "hidden");
+        }
 
         if (transition !== null) {
-            circles.transition(transition).attr("r", function(d) { return r(d[0]); });
+            circles.transition(transition).attr("r", rDataScale);
         } else {
-            circles.attr("r", function(d) { return r(d[0]); });
+            circles.attr("r", rDataScale);
         }
 
         return g.node();
@@ -119,6 +184,30 @@ function balloonplot(w, h) {
 
     bp.position = function(x, y) {
         position = [x, y];
+        return bp;
+    };
+
+    bp.interactionOnElements = function (elems, enable) {
+        if (typeof(enable) === 'undefined') enable = true;
+
+        elems.forEach(function(e) {
+            if (e === 'x') interactionXAxis = enable;
+            if (e === 'y') interactionYAxis = enable;
+            if (e === 'circle') interactionCircles = enable;
+        });
+
+        return bp;
+    };
+
+    bp.valueTextOffset = function (x, y) {
+        valueTextDX = x;
+        valueTextDY = y;
+
+        return bp;
+    };
+
+    bp.valueTextFmt = function (f) {
+        valueTextFmt = f;
         return bp;
     };
 
@@ -216,6 +305,54 @@ function balloonplot(w, h) {
 
         return bp;
     };
+
+
+    function setAxisTicks(axis, labels) {
+        return axis.tickValues(d3.range(labels.length))
+            .tickFormat(function (d, i) { return labels[i]; });
+    }
+
+    function axisAction(action, axis, i) {
+        var cSelector = '.main ', vSelector = '.main ';
+
+        cSelector += axis === 'x' ? '.circle_' + i : '.row_' + i + ' .circle';
+        vSelector += axis === 'x' ? '.value_' + i : '.row_' + i + ' .value';
+
+        var cDisp = action === 'over' ? 'none' : 'block';
+        var vDisp = action === 'over' ? 'block' : 'none';
+
+        if (cDisp === 'none') {
+            if (transition !== null) {
+                g.selectAll(cSelector).interrupt().transition(transition).attr("r", 0);
+            } else {
+                g.selectAll(cSelector).attr("r", 0);
+            }
+        } else {
+            if (transition !== null) {
+                g.selectAll(cSelector).interrupt().transition(transition).attr("r", rDataScale);
+            } else {
+                g.selectAll(cSelector).attr("r", rDataScale);
+            }
+        }
+        g.selectAll(vSelector).style("display", vDisp);
+    }
+
+    function toggleAction(id, arg, on, off) {
+        if (curToggle.id !== null && curToggle.offAction !== null) {
+            curToggle.offAction();
+        }
+
+        if (curToggle.actionArg !== arg) {
+            on();
+            curToggle.id = id;
+            curToggle.actionArg = arg;
+            curToggle.offAction = off;
+        } else {
+            curToggle.id = null;
+            curToggle.actionArg = null;
+            curToggle.offAction = null;
+        }
+    }
 
 
     return bp;

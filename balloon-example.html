@@ -16,6 +16,10 @@
         margin-left: auto;
         margin-right: auto;
     }
+
+    .balloon_plot .value {
+        font-family: Arial, sans-serif;
+    }
     </style>
 
     <script src="d3/d3.js"></script>
@@ -47,6 +51,8 @@
         .position(40, 60)
         .transition(transition)
         .colorScale('y', yColor)
+        .interactionOnElements(['circle', 'x', 'y'])
+        .valueTextFmt(function (v) { return Math.round(v * 100) / 100; })
         .data(data)
         .xAxis(d3.axisTop, xLabels)
         .yAxis(d3.axisRight, yLabels);
