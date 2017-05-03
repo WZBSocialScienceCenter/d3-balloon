@@ -80,6 +80,19 @@ function balloonplot(w, h) {
                 .style("fill", function (_, i) { return colorScale(i); });
         }
 
+        function enableInteractionsOnAxis(axGrp, dir) {
+            axGrp.selectAll('.tick')
+                .on("mouseover", function (i) { axisAction('over', dir, i) })
+                .on("mouseout", function (i) { axisAction('out', dir, i) })
+                .on("touchstart", function(i) {
+                    toggleAction('on_x_axis', i, function() {
+                        axisAction('over', dir, i)
+                    }, function() {
+                        axisAction('out', dir, i)
+                    });
+                });
+        }
+
         g = d3.select(document.createElementNS(d3.namespaces.svg, "g"));
 
         g.attr("class", "plotroot").attr("transform", "translate(" + position.join(',') + ")");
@@ -94,6 +107,10 @@ function balloonplot(w, h) {
             if (colorScale !== null && colorScaleDirection === 'x') {
                 applyColorScaleToAxis(gxAxis);
             }
+
+            if (interactionXAxis) {
+                enableInteractionsOnAxis(gxAxis, 'x');
+            }
         }
 
         if (yAxis !== null) {
@@ -105,6 +122,10 @@ function balloonplot(w, h) {
 
             if (colorScale !== null && colorScaleDirection === 'y') {
                 applyColorScaleToAxis(gyAxis);
+            }
+
+            if (interactionXAxis) {
+                enableInteractionsOnAxis(gyAxis, 'y');
             }
         }
 
