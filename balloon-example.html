@@ -37,9 +37,12 @@
     var xLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
     var yLabels = ['Foo', 'Bar', 'Example', 'Foobar', 'Barfoo'];
 
+    var yColor = d3.scaleOrdinal(d3.schemeCategory10);
+
     var bplot = balloonplot(370, 200)
         .position(40, 60)
         .data(data)
+        .colorScale('y', yColor)
         .xAxis(d3.axisTop, xLabels)
         .yAxis(d3.axisRight, yLabels);
 

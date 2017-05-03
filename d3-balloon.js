@@ -27,6 +27,10 @@ function balloonplot(w, h) {
     var rRange = null;
 
     var data = null;
+
+    var colorScale = null;
+    var colorScaleDirection = null;   // "x" or "y"
+
     var xAxis = null;
     var xAxisOrient = null;
     var yAxis = null;
@@ -39,24 +43,49 @@ function balloonplot(w, h) {
     function bp() {
         if (data === null) throw "data must be set before";
 
+        function getColorFromScale(row, col) {
+            if (colorScale !== null) {
+                if (colorScaleDirection === 'x') {
+                    return colorScale(col);
+                } else if (colorScaleDirection === 'y') {
+                    return colorScale(row);
+                }
+            }
+
+            return '#000000';
+        }
+
+        function applyColorScaleToAxis(axGrp) {
+            axGrp.selectAll('g.tick text')
+                .style("fill", function (_, i) { return colorScale(i); });
+        }
+
         var g = d3.select(document.createElementNS(d3.namespaces.svg, "g"));
 
         g.attr("class", "plotroot").attr("transform", "translate(" + position.join(',') + ")");
 
         if (xAxis !== null) {
             var xAxisPosY = xAxisOrient === top ? -axisH : plotH + axisH;
-            g.append("g")
+            var xAxisGroup = g.append("g")
                 .attr("class", "x_axis")
                 .attr("transform", "translate(0, " + xAxisPosY + ")")
                 .call(xAxis);
+
+            if (colorScale !== null && colorScaleDirection === 'x') {
+                applyColorScaleToAxis(xAxisGroup);
+            }
         }
 
         if (yAxis !== null) {
             var yAxisPosX = xAxisOrient === left ? -axisW : plotW + axisW;
-            g.append("g")
+            var yAxisGroup = g.append("g")
                 .attr("class", "y_axis")
                 .attr("transform", "translate(" + yAxisPosX + ", 0)")
                 .call(yAxis);
+
+            if (colorScale !== null && colorScaleDirection === 'y') {
+                applyColorScaleToAxis(yAxisGroup);
+            }
         }
 
         g.append("g")
@@ -73,7 +102,8 @@ function balloonplot(w, h) {
                             .attr("class", function (_, colIdx) { return "cell cell_" + colIdx; })
                             .attr("cx", function(_, colIdx) { return x(colIdx) })
                             .attr("cy", function(d) { return y(d[1]); })
-                            .attr("r", function(d) { return r(d[0]); });
+                            .attr("r", function(d) { return r(d[0]); })
+                            .style("fill", function (d, colIdx) { return getColorFromScale(d[1], colIdx);  });
 
         return g.node();
     }
@@ -134,6 +164,13 @@ function balloonplot(w, h) {
             position = [axisW + rRange[1], axisH + rRange[1]];
         }
 
+
+        return bp;
+    };
+
+    bp.colorScale = function(dir, scale) {
+        colorScale = scale;
+        colorScaleDirection = dir;
 
         return bp;
     };
