@@ -7,14 +7,30 @@ function maxOfMat(mat) {
 }
 
 
+function setAxisTicks(axis, labels) {
+    return axis.tickValues(d3.range(labels.length))
+        .tickFormat(function (d, i) { return labels[i]; });
+}
 
 function balloonplot(w, h) {
+    var top = 1;
+    var right = 2;
+    var bottom = 3;
+    var left = 4;
+
+
     var plotW = w;
     var plotH = h;
-    var position = [0, 0];
+    var axisW = null;
+    var axisH = null;
+    var position = null;
     var rRange = null;
 
     var data = null;
+    var xAxis = null;
+    var xAxisOrient = null;
+    var yAxis = null;
+    var yAxisOrient = null;
 
     var x = null;
     var y = null;
@@ -25,21 +41,39 @@ function balloonplot(w, h) {
 
         var g = d3.select(document.createElementNS(d3.namespaces.svg, "g"));
 
-        g
-            .attr("transform", "translate(" + position.join(',') + ")")
+        g.attr("class", "plotroot").attr("transform", "translate(" + position.join(',') + ")");
+
+        if (xAxis !== null) {
+            var xAxisPosY = xAxisOrient === top ? -axisH : plotH + axisH;
+            g.append("g")
+                .attr("class", "x_axis")
+                .attr("transform", "translate(0, " + xAxisPosY + ")")
+                .call(xAxis);
+        }
+
+        if (yAxis !== null) {
+            var yAxisPosX = xAxisOrient === left ? -axisW : plotW + axisW;
+            g.append("g")
+                .attr("class", "y_axis")
+                .attr("transform", "translate(" + yAxisPosX + ", 0)")
+                .call(yAxis);
+        }
+
+        g.append("g")
+            .attr("class", "main")
             .selectAll("g")
             .data(data)
             .enter()
-            .append("g")
-                .attr("class", function(_, rowIdx) { return "row row_" + rowIdx;} )
-                .selectAll("circle")
-                    .data(function (row, rowIdx) { return row.map(function (val) {return [val, rowIdx]}); })
-                    .enter()
-                        .append("circle")
-                        .attr("class", function (_, colIdx) { return "cell cell_" + colIdx; })
-                        .attr("cx", function(_, colIdx) { return x(colIdx) })
-                        .attr("cy", function(d) { return y(d[1]); })
-                        .attr("r", function(d) { return r(d[0]); });
+                .append("g")
+                    .attr("class", function(_, rowIdx) { return "row row_" + rowIdx;} )
+                    .selectAll("circle")
+                        .data(function (row, rowIdx) { return row.map(function (val) {return [val, rowIdx]}); })
+                        .enter()
+                            .append("circle")
+                            .attr("class", function (_, colIdx) { return "cell cell_" + colIdx; })
+                            .attr("cx", function(_, colIdx) { return x(colIdx) })
+                            .attr("cy", function(d) { return y(d[1]); })
+                            .attr("r", function(d) { return r(d[0]); });
 
         return g.node();
     }
@@ -63,19 +97,24 @@ function balloonplot(w, h) {
 
         data = d;
 
+        var nCol = data[0].length - 1;
+        var nRow = data.length - 1;
+        var colW = plotW / nCol;
+        var rowH = plotH / nRow;
+        var maxR = Math.min(colW, rowH) / 2;
+
         x = d3.scaleLinear()
             .range([0, plotW])
-            .domain([0, data[0].length]);
+            .domain([0, nCol]);
 
         y = d3.scaleLinear()
             .range([0, plotH])
-            .domain([0, data.length]);
+            .domain([0, nRow]);
 
         var dataMin = minOfMat(data);
         var dataMax = maxOfMat(data);
 
         if (rRange === null) {
-            var maxR = Math.min(x(1) - x(0), y(1) - y(0)) / 2;
             rRange = [Math.ceil(0.05 * maxR), Math.floor(0.95 * maxR)];
         }
 
@@ -83,9 +122,50 @@ function balloonplot(w, h) {
             .domain([dataMin, dataMax])
             .range(rRange);
 
+        if (axisW === null) {
+            axisW = rRange[1] * 1.25;
+        }
+
+        if (axisH === null) {
+            axisH = rRange[1] * 1.25;
+        }
+
+        if (position === null) {
+            position = [axisW + rRange[1], axisH + rRange[1]];
+        }
+
 
         return bp;
     };
+
+    bp.xAxis = function(axisFn, axisTickLabels) {
+        if (data === null) throw "data must be set before";
+
+        xAxisOrient = axisFn === d3.axisTop ? top : bottom;
+
+        xAxis = axisFn(x);
+
+        if (typeof(axisTickLabels) !== "undefined") {
+            xAxis = setAxisTicks(xAxis, axisTickLabels);
+        }
+
+        return bp;
+    };
+
+    bp.yAxis = function(axisFn, axisTickLabels) {
+        if (data === null) throw "data must be set before";
+
+        yAxisOrient = axisFn === d3.axisLeft ? left : right;
+
+        yAxis = axisFn(y);
+
+        if (typeof(axisTickLabels) !== "undefined") {
+            yAxis = setAxisTicks(yAxis, axisTickLabels);
+        }
+
+        return bp;
+    };
+
 
     return bp;
 }

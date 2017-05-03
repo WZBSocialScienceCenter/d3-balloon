@@ -28,25 +28,23 @@
 </div>
 
 <script>
-    var WIDTH = 500;
-    var HEIGHT = 300;
-    var PLOTTING_AREA_MARGINS = [15, 15, 40, 30];   // top, right, bottom, left
-    var PLOTTING_AREA_W = WIDTH - PLOTTING_AREA_MARGINS[1] - PLOTTING_AREA_MARGINS[3];
-    var PLOTTING_AREA_H = HEIGHT - PLOTTING_AREA_MARGINS[0] - PLOTTING_AREA_MARGINS[2];
-
     var svg = d3.select("#vis_container").append("svg")
-        .attr("width", WIDTH)
-        .attr("height", HEIGHT);
+        .attr("width", 500)
+        .attr("height", 300);
 
     var data = generateRandMat(5, 7, 0, 10);
 
-    var bplot = balloonplot(PLOTTING_AREA_W, PLOTTING_AREA_H)
-        .position(PLOTTING_AREA_MARGINS[3], PLOTTING_AREA_MARGINS[0])
-        .data(data);
+    var xLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+    var yLabels = ['Foo', 'Bar', 'Example', 'Foobar', 'Barfoo'];
+
+    var bplot = balloonplot(370, 200)
+        .position(40, 60)
+        .data(data)
+        .xAxis(d3.axisTop, xLabels)
+        .yAxis(d3.axisRight, yLabels);
 
     svg.append(bplot)
         .attr("class", "balloon_plot");
-
 
     function randFloat(a, b) {
         return a + Math.random() * (b - a);
