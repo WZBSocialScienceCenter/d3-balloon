@@ -7,11 +7,6 @@ function maxOfMat(mat) {
 }
 
 
-function setAxisTicks(axis, labels) {
-    return axis.tickValues(d3.range(labels.length))
-        .tickFormat(function (d, i) { return labels[i]; });
-}
-
 function balloonplot(w, h) {
     var top = 1;
     var right = 2;
@@ -36,9 +31,18 @@ function balloonplot(w, h) {
     var yAxis = null;
     var yAxisOrient = null;
 
+    var transition = null;
+
     var x = null;
     var y = null;
     var r = null;
+
+
+    function setAxisTicks(axis, labels) {
+        return axis.tickValues(d3.range(labels.length))
+            .tickFormat(function (d, i) { return labels[i]; });
+    }
+
 
     function bp() {
         if (data === null) throw "data must be set before";
@@ -88,7 +92,7 @@ function balloonplot(w, h) {
             }
         }
 
-        g.append("g")
+        var circles = g.append("g")
             .attr("class", "main")
             .selectAll("g")
             .data(data)
@@ -102,14 +106,24 @@ function balloonplot(w, h) {
                             .attr("class", function (_, colIdx) { return "cell cell_" + colIdx; })
                             .attr("cx", function(_, colIdx) { return x(colIdx) })
                             .attr("cy", function(d) { return y(d[1]); })
-                            .attr("r", function(d) { return r(d[0]); })
                             .style("fill", function (d, colIdx) { return getColorFromScale(d[1], colIdx);  });
+
+        if (transition !== null) {
+            circles.transition(transition).attr("r", function(d) { return r(d[0]); });
+        } else {
+            circles.attr("r", function(d) { return r(d[0]); });
+        }
 
         return g.node();
     }
 
     bp.position = function(x, y) {
         position = [x, y];
+        return bp;
+    };
+
+    bp.transition = function (t) {
+        transition = t;
         return bp;
     };
 

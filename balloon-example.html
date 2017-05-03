@@ -39,10 +39,15 @@
 
     var yColor = d3.scaleOrdinal(d3.schemeCategory10);
 
+    var transition = d3.transition()
+        .duration(500)
+        .ease(d3.easeLinear);
+
     var bplot = balloonplot(370, 200)
         .position(40, 60)
-        .data(data)
+        .transition(transition)
         .colorScale('y', yColor)
+        .data(data)
         .xAxis(d3.axisTop, xLabels)
         .yAxis(d3.axisRight, yLabels);
 
