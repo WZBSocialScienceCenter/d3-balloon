@@ -79,7 +79,10 @@ function balloonplot(w, h) {
     var x = null;   // x scale
     var y = null;   // y scale
     var r = null;   // radius scale
-    var rDataScale = function(d) { return r(d[0]); };   // concrete radius scaling function
+    var rDataScale = function(d) {   // concrete radius scaling function
+        if (isNaN(d[0])) return 0;
+        else return r(d[0]);
+    };
 
     /**
      * Balloon plot plotting function.
@@ -344,7 +347,7 @@ function balloonplot(w, h) {
 
         // calculate an radius range if it was not set manually before
         if (rRange === null) {
-            rRange = [Math.ceil(0.05 * maxR), Math.floor(0.95 * maxR)];
+            rRange = [Math.ceil(0.1 * maxR), Math.floor(0.95 * maxR)];
         }
 
         // get the data minimum / maximum to set a radius scale
@@ -383,8 +386,10 @@ function balloonplot(w, h) {
      * Define an X-axis using d3 axis function `axisFn` (either d3.axisTop or d3.axisBottom) and tick labels
      * `axisTickLabels`.
      */
-    bp.xAxis = function(axisFn, axisTickLabels) {
+    bp.xAxis = function(axisFn, axisTickLabels, height) {
         if (data === null) throw "data must be set before";
+
+        if (typeof(height) !== "undefined") axisH = height;
 
         xAxisOrient = axisFn === d3.axisTop ? top : bottom;
 
@@ -401,8 +406,10 @@ function balloonplot(w, h) {
      * Define an Y-axis using d3 axis function `axisFn` (either d3.axisLeft or d3.axisRight) and tick labels
      * `axisTickLabels`.
      */
-    bp.yAxis = function(axisFn, axisTickLabels) {
+    bp.yAxis = function(axisFn, axisTickLabels, width) {
         if (data === null) throw "data must be set before";
+
+        if (typeof(width) !== "undefined") axisW = width;
 
         yAxisOrient = axisFn === d3.axisLeft ? left : right;
 
