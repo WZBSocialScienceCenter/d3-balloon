@@ -5,26 +5,34 @@
     <title>d3-balloon example</title>
 
     <style type="text/css">
-    body {
-        background: lightgray;
-    }
+        body {
+            font-family: Verdana, Geneva, sans-serif;
+        }
 
-    #vis_container {
-        background: white;
-        width: 500px;
-        margin-top: 50px;
-        margin-left: auto;
-        margin-right: auto;
-    }
+        h1 {
+            font-weight: normal;
+        }
 
-    .balloon_plot .value {
-        font-family: Arial, sans-serif;
-        cursor: default;
-    }
+        #main {
+            margin-top: 30px;
+            margin-left: auto;
+            margin-right: auto;
+            width: 500px;
+        }
 
-    .balloon_plot .tick {
-        cursor: default;
-    }
+        #vis_container {
+            width: 500px;
+            margin-top: 50px;
+        }
+
+        .balloon_plot .value {
+            font-family: Arial, sans-serif;
+            cursor: default;
+        }
+
+        .balloon_plot .tick {
+            cursor: default;
+        }
     </style>
 
     <script src="d3/d3.js"></script>
@@ -32,8 +40,15 @@
 </head>
 <body>
 
-<div id="vis_container">
+<div id="main">
+    <h1>Interactive Balloon Plot<br>with <em>d3-balloon.js</em></h1>
 
+    <p>
+        Markus Konrad, <a href="https://wzb.eu">WZB Berlin</a>, April/May 2017<br>
+        Available on <a href="">GitHub</a>.
+    </p>
+
+    <div id="vis_container"></div>
 </div>
 
 <script>
@@ -41,29 +56,41 @@
         .attr("width", 500)
         .attr("height", 300);
 
+    // generate a 5x7 matrix with random values between 0 and 10
     var data = generateRandMat(5, 7, 0, 10);
 
+    // define the columns labels
     var xLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+
+    // define the row labels
     var yLabels = ['Foo', 'Bar', 'Example', 'Foobar', 'Barfoo'];
 
+    // set the color scale used in the rows
     var yColor = d3.scaleOrdinal(d3.schemeCategory10);
 
+    // set a transition for interactions
     var transition = d3.transition()
         .duration(500)
         .ease(d3.easeLinear);
 
+    // create the balloon plot
     var bplot = balloonplot(370, 200)
-        .position(40, 60)
-        .transition(transition)
-        .colorScale('y', yColor)
-        .interactionOnElements(['circle', 'x', 'y'])
-        .valueTextFmt(function (v) { return Math.round(v * 100) / 100; })
-        .data(data)
-        .xAxis(d3.axisTop, xLabels)
-        .yAxis(d3.axisRight, yLabels);
+        .position(40, 65)         // set the top-left offset
+        .transition(transition)   // enable transitions
+        .colorScale('y', yColor)  // set the row-wise colors
+        .interactionOnElements(['circle', 'x', 'y'])   // enable interactions for mouseover/touch on circles and axes
+        .valueTextFmt(function (v) { return Math.round(v * 100) / 100; })   // custom value formatter
+        .data(data)  // pass the data matrix
+        .xAxis(d3.axisTop, xLabels)     // enable the X axis and pass the tick labels
+        .yAxis(d3.axisRight, yLabels);  // enable the Y axis and pass the tick labels
 
+    // add it to the SVG canvas
     svg.append(bplot)
         .attr("class", "balloon_plot");
+
+
+    // --- helper functions for random data generation ---
+
 
     function randFloat(a, b) {
         return a + Math.random() * (b - a);
