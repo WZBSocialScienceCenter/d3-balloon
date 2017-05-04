@@ -24,6 +24,10 @@ function balloonplot(w, h) {
     // plot size
     var plotW = w;
     var plotH = h;
+
+    // calculated column width and row height
+    var colW = null;
+    var rowH = null;
     // axis size
     var axisW = null;
     var axisH = null;
@@ -51,6 +55,9 @@ function balloonplot(w, h) {
     var interactionXAxis = false;
     var interactionYAxis = false;
     var interactionCircles = false;
+
+    // optional additional callback when a column/row axis should be shown/hidden
+    var axisActionCallback = null;
 
     // for toggled interactions used with touch input, this object records the current state
     var curToggle = {
@@ -103,7 +110,7 @@ function balloonplot(w, h) {
                 }
             }
 
-            return '#000000';
+            return 'default';
         }
 
         /**
@@ -195,7 +202,7 @@ function balloonplot(w, h) {
                 .attr("cy", function(d) { return y(d[1]); })
                 .style("fill", function (d, colIdx) { return getColorFromScale(d[1], colIdx);  });
 
-        if (interactionCircles) {
+        if (interactionCircles || interactionXAxis || interactionYAxis) {
             // add a text for each value (initially invisible)
             var valueTexts = gRows.selectAll("text")
                 .data(dataCellFn)
@@ -210,7 +217,9 @@ function balloonplot(w, h) {
                     .text(function (d) { return valueTextFmt(d[0]) })
                     .style("fill", function (d, colIdx) { return getColorFromScale(d[1], colIdx);  })
                     .style("display", "none");
+        }
 
+        if (interactionCircles) {
             // add invisible rects for mouse over actions of single value cells
             gRows.selectAll("g")
                 .data(dataCellFn)
@@ -268,6 +277,31 @@ function balloonplot(w, h) {
         return bp;
     };
 
+    /** Return column width. */
+    bp.colW = function () {
+        return colW;
+    };
+
+    /** Return row height. */
+    bp.rowH = function () {
+        return rowH;
+    };
+
+    /** Return x scale for concrete value or x scale function. */
+    bp.x = function (_) {
+        return arguments.length ? x(_) : x;
+    };
+
+    /** Return x scale for concrete value or x scale function. */
+    bp.y = function (_) {
+        return arguments.length ? y(_) : y;
+    };
+
+    /** Return radius scaling function. */
+    bp.rDataScale = function () {
+        return rDataScale;
+    };
+
     /**
      * Enable/disable mouse/touch interaction on plot elements `elems` (can be "x", "y", "circle").
      */
@@ -280,6 +314,14 @@ function balloonplot(w, h) {
             if (e === 'circle') interactionCircles = enable;
         });
 
+        return bp;
+    };
+
+    /**
+     * Set action callback to function `f` when a row/column should be shown/hidden.
+     */
+    bp.axisActionCallback = function (f) {
+        axisActionCallback = f;
         return bp;
     };
 
@@ -304,9 +346,8 @@ function balloonplot(w, h) {
     /**
      * Set a d3 transition for interactions.
      */
-    bp.transition = function (t) {
-        transition = t;
-        return bp;
+    bp.transition = function (_) {
+        return arguments.length ? (transition = _, bp) : transition;
     };
 
     /**
@@ -331,8 +372,8 @@ function balloonplot(w, h) {
 
         var nCol = data[0].length - 1;
         var nRow = data.length - 1;
-        var colW = plotW / nCol;
-        var rowH = plotH / nRow;
+        colW = plotW / nCol;
+        rowH = plotH / nRow;
         var maxR = Math.min(colW, rowH) / 2;
 
         // set x scale
@@ -476,6 +517,10 @@ function balloonplot(w, h) {
             }
         }
         g.selectAll(vSelector).style("display", vDisp);
+
+        if (axisActionCallback !== null) {
+            axisActionCallback(g, transition, rDataScale, action, axis, i);
+        }
     }
 
     /**
