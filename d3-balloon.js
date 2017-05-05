@@ -38,18 +38,26 @@ function balloonplot(w, h) {
 
     // 2D data matrix
     var data = null;
+    var dataMin = null;  // minimum value in `data`
+    var dataMax = null;  // maximum value in `data`
 
     // optional circle/axis color scale
     var colorScale = null;
     var colorScaleDirection = null;   // colors on "x" (columns) or "y" (rows)
 
-    // x axis
+    // optional x axis
     var xAxis = null;
     var xAxisOrient = null;  // only top or bottom allowed
 
-    // y axis
+    // optional y axis
     var yAxis = null;
     var yAxisOrient = null;  // only left or right allowed
+
+    // optional legend
+    var legendNumCircles = null;    // number of sample circles to show in the legend
+    var legendOrient = null;        // top, right, bottom or left
+    var legendPadding = 15;
+    var legendItemsPadding = 5;
 
     // enable/disable mouseover/touch interactions on various elements of the plot
     var interactionXAxis = false;
@@ -83,6 +91,8 @@ function balloonplot(w, h) {
     };
 
     var g = null;   // root svg group
+    var gLegend = null;         // legend group
+    var gLegendItems = null;    // legend item groups
     var x = null;   // x scale
     var y = null;   // y scale
     var r = null;   // radius scale
@@ -173,6 +183,33 @@ function balloonplot(w, h) {
             if (interactionXAxis) {
                 enableInteractionsOnAxis(gyAxis, 'y');
             }
+        }
+
+        // add legend -- this must be updated after it was rendered using update() below
+        if (legendNumCircles !== null && legendOrient !== null) {
+            var delta = (dataMax - dataMin) / (legendNumCircles - 1);
+
+            gLegend = g.append("g")
+                .attr("class", "legend");
+
+            gLegendItems = gLegend.selectAll("g")
+                .data(d3.range(legendNumCircles))
+                .enter()
+                    .append("g")
+                    .attr("class", function(d) { return "legend_item legend_item_" + d; });
+
+            gLegendItems.selectAll("circle")
+                .data(function (d) { return [{'i': d}]; })
+                .enter()
+                    .append("circle")
+                    .attr("r", function(d) { return rDataScale([dataMin + d.i * delta]); });
+
+            gLegendItems.selectAll("text")
+                .data(function (d) { return [{'i': d}]; })
+                .enter()
+                    .append("text")
+                    .attr("dy", 5)
+                    .text(function(d) { return valueTextFmt(dataMin + d.i * delta); });
         }
 
         // data cell function for 2D `data` matrix:
@@ -267,6 +304,85 @@ function balloonplot(w, h) {
     //
     // --- public functions ---
     //
+
+    /**
+     * The update function must be called when a dynamic repositioning is necessary after the plot has been rendered.
+     * This is necessary if a legend should be drawn.
+     */
+    bp.update = function() {
+        // update legend positioning
+        if (gLegend !== null && gLegendItems !== null) {
+            var legendDir;
+            if (legendOrient === left || legendOrient === right) {
+                legendDir = 'v';  // vertical
+            } else {
+                legendDir = 'h';  // horizontal
+            }
+
+            var radii = [];
+            gLegendItems.selectAll("circle").each(function () {
+                radii.push(+d3.select(this).attr('r'));
+            });
+
+            var xpos, ypos;
+
+            if (legendDir === 'v') {    // vertical
+                xpos = new Array(legendNumCircles).fill(0);
+                ypos = [];
+                radii.reduce(function(a, b, i) { return ypos[i] = a + 2 * (b + legendItemsPadding * 2); }, 0);
+                ypos = ypos.slice(0, ypos.length-1);
+                ypos.unshift(0);
+            } else {   // horizontal
+                var widths = [];
+                gLegendItems.selectAll("text").each(function () {
+                    widths.push(this.getBBox().width);
+                });
+
+                xpos = [];
+                widths.reduce(function(a, b, i) { return xpos[i] = a + b + 2 * rRange[1] + legendItemsPadding; }, 0);
+                xpos = xpos.slice(0, xpos.length-1);
+                xpos.unshift(0);
+                ypos = new Array(legendNumCircles).fill(0);
+            }
+
+            gLegend.selectAll("g.legend_item")
+                .data(d3.zip(xpos, ypos))
+                    .attr("transform", function (d) { return "translate(" + d.join(',') + ")"; });
+
+            gLegend.selectAll("g.legend_item text")
+                .data(radii)
+                    .attr("x", function (d) {
+                        return legendDir === 'v' ? rRange[1] + legendItemsPadding : d + legendItemsPadding;
+                    });
+
+            var legendW = gLegend.node().getBBox().width;
+            var legendH = gLegend.node().getBBox().height;
+
+            var legendX, legendY;
+
+            if (legendDir === 'v') {
+                legendY = (plotH - legendH) / 2;
+            } else {
+                legendX = (plotW - legendW) / 2;
+            }
+
+            if (legendOrient === left) {
+                legendX = -legendW - legendPadding;
+                if (yAxisOrient === left) legendX -= axisW;
+            } else if (legendOrient === right) {
+                legendX = plotW + colW + legendPadding;
+                if (yAxisOrient === right) legendX += axisW;
+            } else if (legendOrient === top) {
+                legendY = -legendH - legendPadding;
+                if (xAxisOrient === top) legendY -= axisH;
+            } else {  // legendOrient === bottom
+                legendY = plotH + legendH + legendPadding;
+                if (xAxisOrient === bottom) legendY += axisH;
+            }
+
+            gLegend.attr("transform", "translate(" + legendX + "," + legendY + ")");
+        }
+    };
 
 
     /**
@@ -392,8 +508,10 @@ function balloonplot(w, h) {
         }
 
         // get the data minimum / maximum to set a radius scale
+        dataMin = minOfMat(data);
+        dataMax = maxOfMat(data);
         r = d3.scaleLinear()
-            .domain([minOfMat(data), maxOfMat(data)])
+            .domain([dataMin, dataMax])
             .range(rRange);
 
         // set the axis width and height
@@ -459,6 +577,34 @@ function balloonplot(w, h) {
         if (typeof(axisTickLabels) !== "undefined") {
             yAxis = setAxisTicks(yAxis, axisTickLabels);
         }
+
+        return bp;
+    };
+
+    /**
+     * Set a legend at position `orient`, which can be 'left', 'top', 'right' or 'bottom' and `n` sample circles.
+     */
+    bp.legend = function(orient, n, _legendPadding, _legendItemsPadding) {
+        if (orient === 'left') {
+            legendOrient = left;
+        } else if (orient === 'right') {
+            legendOrient = right;
+        } else if (orient === 'bottom') {
+            legendOrient = bottom;
+        } else if (orient === 'top') {
+            legendOrient = top;
+        } else {
+            throw "invalid orientation";
+        }
+
+        if (n > 1) {
+            legendNumCircles = n;
+        } else {
+            throw "invalid number of circles (must be > 1)";
+        }
+
+        if (typeof(_legendPadding) !== "undefined") legendPadding = _legendPadding;
+        if (typeof(_legendItemsPadding) !== "undefined") legendItemsPadding = _legendItemsPadding;
 
         return bp;
     };

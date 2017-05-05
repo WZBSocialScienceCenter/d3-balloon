@@ -33,6 +33,11 @@
         .balloon_plot .tick {
             cursor: default;
         }
+
+        .balloon_plot .legend circle,
+        .balloon_plot .legend text {
+            fill: #666666;
+        }
     </style>
 
     <script src="d3/d3.js"></script>
@@ -54,10 +59,10 @@
 <script>
     var svg = d3.select("#vis_container").append("svg")
         .attr("width", 500)
-        .attr("height", 300);
+        .attr("height", 500);
 
     // generate a 5x7 matrix with random values between 0 and 10
-    var data = generateRandMat(5, 7, 0, 10);
+    var data = generateRandMat(5, 7, 0, 10, true);
 
     // define the columns labels
     var xLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
@@ -75,22 +80,23 @@
 
     // create the balloon plot
     var bplot = balloonplot(370, 200)
-        .position(40, 65)         // set the top-left offset
-        .transition(transition)   // enable transitions
-        .colorScale('y', yColor)  // set the row-wise colors
+        .position(40, 65)               // set the top-left offset
+        .transition(transition)         // enable transitions
+        .colorScale('y', yColor)        // set the row-wise colors
         .interactionOnElements(['circle', 'x', 'y'])   // enable interactions for mouseover/touch on circles and axes
         .valueTextFmt(function (v) { return Math.round(v * 100) / 100; })   // custom value formatter
-        .data(data)  // pass the data matrix
+        .data(data)                     // pass the data matrix
         .xAxis(d3.axisTop, xLabels)     // enable the X axis and pass the tick labels
-        .yAxis(d3.axisRight, yLabels);  // enable the Y axis and pass the tick labels
+        .yAxis(d3.axisRight, yLabels)   // enable the Y axis and pass the tick labels
+        .legend('bottom', 3);           // legend below the plot with 3 sample circles (requires bplot.update() below)
 
     // add it to the SVG canvas
     svg.append(bplot)
         .attr("class", "balloon_plot");
+    bplot.update();   // necessary update for dynamic repositioning of the legend after it was rendered
 
 
     // --- helper functions for random data generation ---
-
 
     function randFloat(a, b) {
         return a + Math.random() * (b - a);
