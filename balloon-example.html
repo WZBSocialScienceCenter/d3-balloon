@@ -93,7 +93,7 @@
     // add it to the SVG canvas
     svg.append(bplot)
         .attr("class", "balloon_plot");
-    bplot.update();   // necessary update for dynamic repositioning of the legend after it was rendered
+    bplot.init();   // necessary update for dynamic repositioning of the legend after it was rendered
 
 
     // --- helper functions for random data generation ---

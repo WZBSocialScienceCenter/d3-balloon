@@ -53,6 +53,9 @@ function balloonplot(w, h) {
     var yAxis = null;
     var yAxisOrient = null;  // only left or right allowed
 
+    // circles in plot
+    var circles = null;
+
     // optional legend
     var legendNumCircles = null;    // number of sample circles to show in the legend
     var legendOrient = null;        // top, right, bottom or left
@@ -185,7 +188,7 @@ function balloonplot(w, h) {
             }
         }
 
-        // add legend -- this must be updated after it was rendered using update() below
+        // add legend -- this must be updated after it was rendered using init() below
         if (legendNumCircles !== null && legendOrient !== null) {
             var delta = (dataMax - dataMin) / (legendNumCircles - 1);
 
@@ -230,18 +233,19 @@ function balloonplot(w, h) {
                     .attr("class", function(_, rowIdx) { return "row row_" + rowIdx;} );
 
         // add a circle for each cell
-        var circles = gRows.selectAll("circle")
+        circles = gRows.selectAll("circle")
             .data(dataCellFn)
             .enter()
                 .append("circle")
                 .attr("class", function (_, colIdx) { return "circle circle_" + colIdx; })
                 .attr("cx", function(_, colIdx) { return x(colIdx) })
                 .attr("cy", function(d) { return y(d[1]); })
+                .attr("r", 0)   // set real radius in init() method
                 .style("fill", function (d, colIdx) { return getColorFromScale(d[1], colIdx);  });
 
         if (interactionCircles || interactionXAxis || interactionYAxis) {
             // add a text for each value (initially invisible)
-            var valueTexts = gRows.selectAll("text")
+            gRows.selectAll("text")
                 .data(dataCellFn)
                 .enter()
                     .append("text")
@@ -290,13 +294,6 @@ function balloonplot(w, h) {
                         .style("visibility", "hidden");
         }
 
-        // optionally add a transition
-        if (transition !== null) {
-            circles.transition(transition).attr("r", rDataScale);
-        } else {
-            circles.attr("r", rDataScale);
-        }
-
         return g.node();
     }
 
@@ -306,10 +303,16 @@ function balloonplot(w, h) {
     //
 
     /**
-     * The update function must be called when a dynamic repositioning is necessary after the plot has been rendered.
-     * This is necessary if a legend should be drawn.
+     * The init function must be called after the plot has been added to an SVG element and was rendered.
      */
-    bp.update = function() {
+    bp.init = function() {
+        // optionally add a transition
+        if (transition !== null) {
+            circles.transition(transition).attr("r", rDataScale);
+        } else {
+            circles.attr("r", rDataScale);
+        }
+
         // update legend positioning
         if (gLegend !== null && gLegendItems !== null) {
             var legendDir;
@@ -382,6 +385,8 @@ function balloonplot(w, h) {
 
             gLegend.attr("transform", "translate(" + legendX + "," + legendY + ")");
         }
+
+        return bp;
     };
 
 
