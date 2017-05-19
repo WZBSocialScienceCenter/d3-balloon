@@ -8,6 +8,8 @@ April/Mai 2017, Markus Konrad <markus.konrad@wzb.eu> / [Berlin Social Science Ce
 
 ![balloon plot example with mouseover](http://datascience.blog.wzb.eu/wp-content/uploads/10/2017/05/d3-balloon-example2.png)
 
+You can also have a look at a live example with random data here: http://dsspace.wzb.eu/d3-balloon/
+
 This plot has been created with the following simple code:
 
 ```javascript
